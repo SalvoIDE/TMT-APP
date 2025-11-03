@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trail Making Test — Offline Edition</title>
+<style>
+body {background:#111827; color:white; font-family:sans-serif; text-align:center; margin:0; overflow:hidden;}
+.hidden {display:none;}
+button {background:#1f2937; color:white; border:1px solid #fff; border-radius:8px; padding:10px 20px; margin:10px; font-size:18px; cursor:pointer;}
+canvas {background:#111827; display:block; margin:0 auto; touch-action:none;}
+input {font-size:18px; padding:5px; margin:10px; border-radius:5px; border:none;}
+h1,h2,p {margin:10px;}
+</style>
+</head>
+<body>
+<div id="home">
+  <h1>Trail Making Test — Offline Edition</h1>
+  <p><label>Participant ID: <input id="pid" placeholder="P01"></label></p>
+  <button id="startBtn">Start Session</button>
+</div>
+
+<div id="test" class="hidden">
+  <h2 id="taskTitle"></h2>
+  <canvas id="canvas"></canvas>
+  <button id="saveBtn" class="hidden">💾 Save results & Exit</button>
+</div>
+
+<div id="message" class="hidden"><h2 id="msgText"></h2></div>
+
+<script>
+(function(){
+  const canvas=document.getElementById("canvas"),ctx=canvas.getContext("2d");
+  const home=document.getElementById("home"),test=document.getElementById("test"),msg=document.getElementById("message"),msgText=document.getElementById("msgText");
+  const startBtn=document.getElementById("startBtn"),saveBtn=document.getElementById("saveBtn"),title=document.getElementById("taskTitle");
+  let pid="",currentTask=0,tasks=["PracticeA","TMT-A","PracticeB","TMT-B"],nodes=[],path=[],current=0,startTime=null,log=[],done=false;
+
+  function resize(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;if(nodes.length)draw();}
+  window.addEventListener("resize",resize);
+  function scale(x,y){return{x:x*canvas.width/2048,y:y*canvas.height/1536}}
+
+  const layouts={
+    "PracticeA":[{l:"Begin",x:300,y:1300},{l:"2",x:600,y:1100},{l:"3",x:900,y:1250},{l:"4",x:1200,y:1000},{l:"5",x:1500,y:1100},{l:"6",x:1700,y:900},{l:"7",x:1300,y:700},{l:"End",x:800,y:600}],
+    "TMT-A":[{l:"Begin",x:200,y:1300},{l:"2",x:400,y:1150},{l:"3",x:700,y:1250},{l:"4",x:900,y:1000},{l:"5",x:1200,y:1100},{l:"6",x:1500,y:900},{l:"7",x:1800,y:950},{l:"8",x:1700,y:700},{l:"9",x:1400,y:600},{l:"10",x:1100,y:800},{l:"11",x:800,y:700},{l:"12",x:500,y:600},{l:"13",x:300,y:700},{l:"14",x:400,y:400},{l:"15",x:700,y:500},{l:"16",x:1000,y:350},{l:"17",x:1300,y:400},{l:"18",x:1600,y:300},{l:"19",x:1800,y:500},{l:"20",x:1500,y:650},{l:"21",x:1200,y:500},{l:"22",x:900,y:400},{l:"23",x:600,y:300},{l:"24",x:350,y:450},{l:"End",x:250,y:250}],
+    "PracticeB":[{l:"Begin",x:300,y:1300},{l:"A",x:600,y:1100},{l:"2",x:900,y:1250},{l:"B",x:1200,y:1000},{l:"3",x:1500,y:1100},{l:"C",x:1700,y:900},{l:"4",x:1300,y:700},{l:"End",x:800,y:600}],
+    "TMT-B":[{l:"Begin",x:250,y:1200},{l:"A",x:500,y:1150},{l:"2",x:400,y:900},{l:"B",x:800,y:950},{l:"3",x:900,y:700},{l:"C",x:400,y:650},{l:"4",x:1200,y:600},{l:"D",x:1600,y:700},{l:"5",x:1500,y:900},{l:"E",x:1000,y:1100},{l:"6",x:700,y:500},{l:"F",x:300,y:400},{l:"7",x:500,y:300},{l:"G",x:800,y:350},{l:"8",x:1000,y:200},{l:"H",x:1300,y:350},{l:"9",x:1600,y:400},{l:"I",x:1700,y:600},{l:"10",x:1800,y:800},{l:"J",x:1600,y:1000},{l:"11",x:1200,y:1200},{l:"K",x:800,y:1300},{l:"12",x:500,y:1400},{l:"L",x:300,y:1300},{l:"End",x:1800,y:1350}]};
+
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    if(path.length>1){ctx.beginPath();ctx.lineWidth=3;ctx.strokeStyle="#fff";ctx.moveTo(path[0].x,path[0].y);for(let i=1;i<path.length;i++)ctx.lineTo(path[i].x,path[i].y);ctx.stroke();}
+    ctx.textAlign="center";ctx.textBaseline="middle";ctx.lineWidth=2;ctx.strokeStyle="#fff";ctx.fillStyle="#111827";ctx.font=Math.floor(canvas.width/30)+"px Arial";
+    for(let n of nodes){ctx.beginPath();ctx.arc(n.x,n.y,n.r,0,2*Math.PI);ctx.fill();ctx.stroke();ctx.fillStyle="#fff";ctx.fillText(n.l,n.x,n.y);ctx.fillStyle="#111827";}
+  }
+
+  function nextExpected(){
+    return nodes[current].l;
+  }
+
+  function startTask(){
+    const taskName=tasks[currentTask];
+    title.textContent=taskName;
+    home.classList.add("hidden");
+    test.classList.remove("hidden");
+    msg.classList.add("hidden");
+    resize();
+    nodes=layouts[taskName].map(p=>{let s=scale(p.x,p.y);return{x:s.x,y:s.y,l:p.l,r:Math.min(canvas.width,canvas.height)/25}});
+    path=[];current=0;startTime=null;log=[];done=false;saveBtn.classList.add("hidden");
+    draw();
+  }
+
+  function tap(e){
+    if(done)return;
+    const rect=canvas.getBoundingClientRect();
+    const x=(e.touches?e.touches[0].clientX:e.clientX)-rect.left;
+    const y=(e.touches?e.touches[0].clientY:e.clientY)-rect.top;
+    const now=Date.now();
+    for(let n of nodes){
+      const dx=n.x-x,dy=n.y-y;
+      if(Math.sqrt(dx*dx+dy*dy)<n.r){
+        const exp=nextExpected();
+        if(n.l===exp){
+          if(!startTime)startTime=now;
+          const delta=log.length?(now-log[log.length-1].t_rel):0;
+          log.push({ts:new Date().toISOString(),event:"click",elapsed:now-startTime,participant:pid,task:tasks[currentTask],index:current+1,label:n.l,expected:exp,x:Math.round(x),y:Math.round(y),delta_ms:delta,t_rel:now});
+          path.push({x:n.x,y:n.y});current++;draw();
+          if(current>=nodes.length){done=true;setTimeout(showSave,400);} 
+        }
+        break;
+      }
+    }
+  }
+
+  function showSave(){
+    log.push({ts:new Date().toISOString(),event:"completed",participant:pid,task:tasks[currentTask]});
+    saveResults();
+  }
+
+  function saveResults(){
+    const task=tasks[currentTask];
+    const dateStr=new Date().toISOString().split("T")[0];
+    const base=`${pid}_${task}_${dateStr}`;
+    const csv=createCSV(),txt=createTXT(),json=createJSON();
+
+    openFile(csv,"text/csv",base+".csv");
+    openFile(txt,"text/plain",base+".txt");
+    openFile(json,"application/json",base+".json");
+
+    setTimeout(()=>{nextTask();},3000);
+  }
+
+  function openFile(content,type,filename){
+    const data='data:'+type+';charset=utf-8,'+encodeURIComponent(content);
+    const a=document.createElement('a');a.href=data;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);
+    window.open(data,'_blank');
+  }
+
+  function createCSV(){
+    let csv="timestamp,event_type,elapsed_ms,participant_id,task,click_index,label,expected,x,y,delta_ms\n";
+    log.forEach(o=>{csv+=[o.ts,o.event,o.elapsed,o.participant,o.task,o.index,o.label,o.expected,o.x,o.y,o.delta_ms].join(",")+"\n"});
+    return csv;
+  }
+
+  function createTXT(){
+    return log.map(o=>`${o.ts} | ${o.event} | ${o.participant} | ${o.task} | idx=${o.index} | ${o.label}->${o.expected} | Δ=${o.delta_ms}ms`).join("\n");
+  }
+
+  function createJSON(){
+    return JSON.stringify(log,null,2);
+  }
+
+  function nextTask(){
+    currentTask++;
+    if(currentTask<tasks.length){
+      msgText.textContent=`Next: ${tasks[currentTask]} starting...`;
+      test.classList.add("hidden"); msg.classList.remove("hidden");
+      setTimeout(startTask,2500);
+    } else {
+      msgText.textContent="Session completed ✅";
+      saveBtn.classList.add("hidden");
+      const restart=document.createElement("button");
+      restart.textContent="Restart Session";
+      restart.onclick=()=>{location.reload();};
+      msg.appendChild(restart);
+    }
+  }
+
+  startBtn.onclick=()=>{
+    pid=document.getElementById("pid").value||"P00";
+    currentTask=0;
+    startTask();
+  };
+
+  canvas.addEventListener("mousedown",tap);
+  canvas.addEventListener("touchstart",tap);
+})();
+</script>
+</body>
+</html>
