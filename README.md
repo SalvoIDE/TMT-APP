@@ -19,7 +19,6 @@ The project is designed to run locally or via GitHub Pages without
 server dependencies. All data is saved locally on the user's device.
 
 Supported Devices:
-- iPad (iOS ≥ 10.3.3)
 - Modern desktop browsers (Safari, Chrome, Firefox, Edge)
 
 ------------------------------------------------------------
@@ -27,9 +26,7 @@ Supported Devices:
 ------------------------------------------------------------
 The app consists of a single HTML file with embedded CSS and JS logic:
 - index.html         → Main app file (UI + logic)
-- README_TMT_IT.txt  → End-user instructions (Italian)
-- README_TMT_EN.txt  → End-user instructions (English)
-- README_TMT_DEV.txt → Developer documentation
+- README.txt  → End-user instructions (English)
 
 No external dependencies or frameworks are required.
 
@@ -41,9 +38,9 @@ The application workflow follows four sequential tasks:
   Practice A → TMT-A → Practice B → TMT-B
 
 Each task:
-- Loads a fixed set of node coordinates (2048×1536 logical space)
+- Loads a fixed set of node coordinates (yyyy × yyyy logical space)
 - Draws numbered circles in a fixed order
-- Tracks touch or mouse input events
+- Tracks mouse input events
 - Logs every valid click, elapsed time, and inter-click delta
 - Saves results in three local file formats:
     [ParticipantID]_[TaskType]_[YYYY-MM-DD].csv
@@ -55,8 +52,7 @@ Each task:
 ------------------------------------------------------------
 - Data is stored temporarily in the browser’s localStorage.
 - Upon completion, three output files are generated.
-- Files are automatically opened in a new tab for saving via:
-    "Share → Save to Files" (on iPad)
+- Files are automatically opened in a new tab for saving.
 - No external network connections or APIs are used.
 - Only Participant ID is collected (no personal data).
 
@@ -69,7 +65,7 @@ Core JS sections in index.html:
 3. Event listeners (start, tap, save)
 4. Drawing logic (Canvas API)
 5. Data logging and CSV/JSON/TXT generation
-6. Automatic file download via Blob / data URI
+6. Automatic file download.
 
 ------------------------------------------------------------
 6. CUSTOMIZATION
@@ -100,6 +96,7 @@ Suggested extensions:
 - Real-time visualization of paths
 - Integration with clinical data systems (offline export only)
 - Automated error counting / feedback metrics
+- Drawing a line between circles
 
 ------------------------------------------------------------
 9. LICENSE AND ATTRIBUTION
